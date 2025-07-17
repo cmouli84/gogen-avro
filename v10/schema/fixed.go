@@ -26,6 +26,10 @@ func (s *FixedDefinition) Name() string {
 	return s.GoType()
 }
 
+func (s *FixedDefinition) Package() string {
+	return getPackageName(s.name.Namespace)
+}
+
 func (s *FixedDefinition) AvroName() QualifiedName {
 	return s.name
 }
@@ -38,6 +42,10 @@ func (s *FixedDefinition) GoType() string {
 	return generator.ToPublicName(s.name.String())
 }
 
+func (s *FixedDefinition) FullQualifiedGoType() string {
+	return fmt.Sprintf("%s.%s", s.Package(), s.GoType())
+}
+
 func (s *FixedDefinition) SizeBytes() int {
 	return s.sizeBytes
 }
@@ -47,7 +55,11 @@ func (s *FixedDefinition) filename() string {
 }
 
 func (s *FixedDefinition) SerializerMethod() string {
-	return fmt.Sprintf("write%v", s.GoType())
+	return fmt.Sprintf("Write%v", s.GoType())
+}
+
+func (s *FixedDefinition) FullQualifiedSerializerMethod() string {
+	return fmt.Sprintf("%s.Write%v", s.Package(), s.GoType())
 }
 
 func (s *FixedDefinition) Attribute(name string) interface{} {
@@ -70,6 +82,10 @@ func (s *FixedDefinition) DefaultValue(lvalue string, rvalue interface{}) (strin
 	return fmt.Sprintf("copy(%v[:], []byte(%q))", lvalue, rvalue), nil
 }
 
+func (s *FixedDefinition) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	return s.DefaultValue(lvalue, rvalue)
+}
+
 func (s *FixedDefinition) IsReadableBy(d Definition) bool {
 	if fixed, ok := d.(*FixedDefinition); ok {
 		return fixed.sizeBytes == s.sizeBytes && hasMatchingName(s.name, d)
@@ -79,6 +95,10 @@ func (s *FixedDefinition) IsReadableBy(d Definition) bool {
 
 func (s *FixedDefinition) WrapperType() string {
 	return fmt.Sprintf("%vWrapper", s.GoType())
+}
+
+func (s *FixedDefinition) FullQualifiedWrapperType() string {
+	return fmt.Sprintf("%s.%vWrapper", s.Package(), s.GoType())
 }
 
 func (s *FixedDefinition) WrapperPointer() bool { return false }

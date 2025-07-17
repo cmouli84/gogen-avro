@@ -26,8 +26,16 @@ func (s *FloatField) DefaultValue(lvalue string, rvalue interface{}) (string, er
 	return fmt.Sprintf("%v = %v", lvalue, rvalue), nil
 }
 
+func (s *FloatField) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	return s.DefaultValue(lvalue, rvalue)
+}
+
 func (s *FloatField) WrapperType() string {
 	return "types.Float"
+}
+
+func (s *FloatField) FullQualifiedWrapperType() string {
+	return s.WrapperType()
 }
 
 func (s *FloatField) IsReadableBy(f AvroType) bool {

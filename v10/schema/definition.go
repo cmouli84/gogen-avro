@@ -11,9 +11,15 @@ type Definition interface {
 	// A user-friendly name that can be built into a Go string (for unions, mostly)
 	Name() string
 
+	Package() string
+
 	GoType() string
 
+	FullQualifiedGoType() string
+
 	SerializerMethod() string
+
+	FullQualifiedSerializerMethod() string
 
 	Children() []AvroType
 
@@ -21,9 +27,11 @@ type Definition interface {
 	// A JSON object defining this object, for writing the schema back out
 	Definition(scope map[QualifiedName]interface{}) (interface{}, error)
 	DefaultValue(lvalue string, rvalue interface{}) (string, error)
+	FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error)
 
 	IsReadableBy(f Definition) bool
 	WrapperType() string
+	FullQualifiedWrapperType() string
 }
 
 func hasMatchingName(writerName QualifiedName, reader Definition) bool {

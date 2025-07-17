@@ -20,6 +20,8 @@ func main() {
 
 	var err error
 	pkg := generator.NewPackage(cfg.packageName, codegenComment(cfg))
+	generator.PackageName = cfg.packageName
+	generator.BasePackageName = cfg.basePackageName
 	namespace := parser.NewNamespace(cfg.shortUnions)
 	gen := flat.NewFlatPackageGenerator(pkg, cfg.containers)
 

@@ -2,7 +2,6 @@ package schema
 
 import (
 	"fmt"
-
 	"github.com/actgardner/gogen-avro/v10/util"
 )
 
@@ -30,8 +29,24 @@ func (s *BytesField) DefaultValue(lvalue string, rvalue interface{}) (string, er
 	return fmt.Sprintf("%v = []byte(%q)", lvalue, b), nil
 }
 
+func (s *BytesField) Package() string {
+	return getPackageName("")
+}
+
+func (s *BytesField) FullQualifiedGoType() string {
+	return fmt.Sprintf("%s.%v", s.Package(), s.goType)
+}
+
+func (s *BytesField) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	return s.DefaultValue(lvalue, rvalue)
+}
+
 func (s *BytesField) WrapperType() string {
 	return "BytesWrapper"
+}
+
+func (s *BytesField) FullQualifiedWrapperType() string {
+	return fmt.Sprintf("%v.%v", s.Package(), s.WrapperType())
 }
 
 func (s *BytesField) IsReadableBy(f AvroType) bool {

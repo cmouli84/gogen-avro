@@ -9,6 +9,10 @@ import (
 	"github.com/actgardner/gogen-avro/v10/vm/types"
 	"github.com/actgardner/gogen-avro/v10/vm"
 	"github.com/actgardner/gogen-avro/v10/compiler"
+
+	{{ range $i, $pkg := .GetImportPackages -}}
+	"{{ $pkg }}"
+	{{ end -}}
 )
 
 var _ = fmt.Printf
@@ -17,11 +21,7 @@ var _ = fmt.Printf
 type {{ .Name }} struct {
 {{ range $i, $field := .Fields -}}
 	{{ if ne $field.Doc "" }}// {{ $field.Doc }}{{ end }}
-	{{ if ne $field.Tags "" -}}
-		{{ $field.GoName }} {{ $field.Type.GoType }} ` + "`{{ $field.Tags }}`" + `
-	{{ else -}}
-		{{ $field.GoName }} {{ $field.Type.GoType }}
-	{{ end -}}
+	{{ $field.GoName }} {{ if ne $field.Package $.Package }}{{ $field.Type.FullQualifiedGoType }}{{ else }}{{ $field.Type.GoType }}{{ end }}{{ if ne $field.Tags "" }} ` + "`{{ $field.Tags }}`" + `{{ end }}
 {{ end }}
 }
 
@@ -30,13 +30,14 @@ const {{ .Name }}AvroCRC64Fingerprint = {{ definitionFingerprint . }}
 func {{ .ConstructorMethod }} ({{ .GoType}}) {
 	r := {{ .Name }}{}
 	{{ range $i, $field := .Fields -}}
+	{{ if .HasDefault -}}
+		{{ if ne $field.Package $.Package }}{{ $.FullQualifiedDefaultForField $field }}{{ else }}{{ $.DefaultForField $field }}{{ end }}
+	{{ else -}}
 	{{ if $.ConstructableForField $field | ne "" -}}
-                {{ if not (hasNullDefault $field.Type) -}}
-		{{ $.ConstructableForField $field }}
-                {{ end -}}
+		{{ if not (hasNullDefault $field.Type) -}}
+		{{ if ne $field.Package $.Package }}{{ $.FullQualifiedConstructableForField $field }}{{ else }}{{ $.ConstructableForField $field }}{{ end }}
+		{{ end -}}
 	{{ end -}}
-        {{ if .HasDefault -}}
-       	 	{{ $.DefaultForField $field }}
 	{{ end -}}
 	{{ end -}}
 	return r
@@ -68,7 +69,7 @@ func Deserialize{{ .Name }}FromSchema(r io.Reader, schema string) ({{ .GoType }}
 func {{ .SerializerMethod }}(r {{ .GoType }}, w io.Writer) error {
 	var err error
 	{{ range $i, $field := .Fields -}}
-	err = {{ .Type.SerializerMethod }}( r.{{ .GoName }}, w)
+	{{ if ne $field.Package $.Package }}err = {{ .Type.FullQualifiedSerializerMethod }}( r.{{ .GoName }}, w){{ else }}err = {{ .Type.SerializerMethod }}( r.{{ .GoName }}, w){{ end }}
 	if err != nil {
 		return err
 	}
@@ -102,10 +103,10 @@ func (r *{{ .GoType }}) Get(i int) types.Field {
 	{{ range $i, $field := .Fields -}}
 	case {{ $i }}:
 		{{ if $.ConstructableForField $field | ne "" -}}
-			{{ $.ConstructableForField $field }}
+			{{ if ne $field.Package $.Package }}{{ $.FullQualifiedConstructableForField $field }}{{ else }}{{ $.ConstructableForField $field }}{{ end }}
 		{{ end -}}
 		{{ if ne $field.Type.WrapperType "" -}}
-			w := {{ $field.Type.WrapperType }}{Target: &r.{{ $field.GoName }}}
+			w := {{ if ne $field.Package $.Package }}{{ $field.Type.FullQualifiedWrapperType }}{{ else }}{{ $field.Type.WrapperType }}{{ end }}{Target: &r.{{ $field.GoName }}}
 			{{ if $field.Type.WrapperPointer }}
 			return &w
 			{{ else }}
@@ -124,7 +125,7 @@ func (r *{{ .GoType }}) SetDefault(i int) {
 	{{ range $i, $field := .Fields -}}
         {{ if .HasDefault -}}
 	case {{ $i }}:
-       	 	{{ $.DefaultForField $field }}
+			{{ if ne $field.Package $.Package }}{{ $.FullQualifiedDefaultForField $field }}{{ else }}{{ $.DefaultForField $field }}{{ end }}
 		return
 	{{ end -}}
 	{{ end -}}
@@ -198,9 +199,9 @@ func (r *{{ .GoType }}) UnmarshalJSON(data []byte) (error) {
 	} else {
         	{{ if .HasDefault -}}
 		{{ if $.ConstructableForField $field | ne "" -}}
-		{{ $.ConstructableForField $field }}
+		{{ if ne $field.Package $.Package }}{{ $.FullQualifiedConstructableForField $field }}{{ else }}{{ $.ConstructableForField $field }}{{ end }}
 		{{ end -}}
-       	 	{{ $.DefaultForField $field }}
+       	 	{{ if ne $field.Package $.Package }}{{ $.FullQualifiedDefaultForField $field }}{{ else }}{{ $.DefaultForField $field }}{{ end }}
 		{{ else -}}
 		return fmt.Errorf("no value specified for {{ $field.Name }}")
 		{{ end -}}

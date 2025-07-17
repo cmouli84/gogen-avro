@@ -31,6 +31,10 @@ func (e *EnumDefinition) Name() string {
 	return e.GoType()
 }
 
+func (e *EnumDefinition) Package() string {
+	return getPackageName(e.name.Namespace)
+}
+
 func (e *EnumDefinition) Doc() string {
 	return strings.ReplaceAll(e.doc, "\n", " ")
 }
@@ -64,8 +68,16 @@ func (e *EnumDefinition) GoType() string {
 	return generator.ToPublicName(e.name.String())
 }
 
+func (e *EnumDefinition) FullQualifiedGoType() string {
+	return fmt.Sprintf("%s.%s", e.Package(), e.GoType())
+}
+
 func (e *EnumDefinition) SerializerMethod() string {
-	return "write" + e.GoType()
+	return "Write" + e.GoType()
+}
+
+func (e *EnumDefinition) FullQualifiedSerializerMethod() string {
+	return e.Package() + ".Write" + e.GoType()
 }
 
 func (e *EnumDefinition) FromStringMethod() string {
@@ -96,6 +108,14 @@ func (s *EnumDefinition) DefaultValue(lvalue string, rvalue interface{}) (string
 	return fmt.Sprintf("%v = %v", lvalue, generator.ToPublicName(s.GoType()+strings.Title(rvalue.(string)))), nil
 }
 
+func (s *EnumDefinition) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	if _, ok := rvalue.(string); !ok {
+		return "", fmt.Errorf("Expected string as default for field %v, got %q", lvalue, rvalue)
+	}
+
+	return fmt.Sprintf("%v = %s.%v", lvalue, s.Package(), generator.ToPublicName(s.GoType()+strings.Title(rvalue.(string)))), nil
+}
+
 func (s *EnumDefinition) IsReadableBy(d Definition) bool {
 	_, ok := d.(*EnumDefinition)
 	return ok && hasMatchingName(s.AvroName(), d)
@@ -103,6 +123,10 @@ func (s *EnumDefinition) IsReadableBy(d Definition) bool {
 
 func (s *EnumDefinition) WrapperType() string {
 	return fmt.Sprintf("%vWrapper", s.GoType())
+}
+
+func (s *EnumDefinition) FullQualifiedWrapperType() string {
+	return fmt.Sprintf("%s.%vWrapper", s.Package(), s.GoType())
 }
 
 func (s *EnumDefinition) WrapperPointer() bool { return false }

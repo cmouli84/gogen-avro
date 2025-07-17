@@ -25,8 +25,16 @@ func (s *DoubleField) DefaultValue(lvalue string, rvalue interface{}) (string, e
 	return fmt.Sprintf("%v = %v", lvalue, rvalue), nil
 }
 
+func (s *DoubleField) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	return s.DefaultValue(lvalue, rvalue)
+}
+
 func (s *DoubleField) WrapperType() string {
 	return "types.Double"
+}
+
+func (s *DoubleField) FullQualifiedWrapperType() string {
+	return s.WrapperType()
 }
 
 func (s *DoubleField) IsReadableBy(f AvroType) bool {

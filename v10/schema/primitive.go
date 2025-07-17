@@ -9,15 +9,31 @@ type PrimitiveField struct {
 	unionKey         string
 }
 
+type PrimitiveType interface {
+	IsPrimitive() bool
+}
+
 func (s *PrimitiveField) Name() string {
 	return s.name
+}
+
+func (s *PrimitiveField) Package() string {
+	return ""
 }
 
 func (s *PrimitiveField) GoType() string {
 	return s.goType
 }
 
+func (s *PrimitiveField) FullQualifiedGoType() string {
+	return s.goType
+}
+
 func (s *PrimitiveField) SerializerMethod() string {
+	return s.serializerMethod
+}
+
+func (s *PrimitiveField) FullQualifiedSerializerMethod() string {
 	return s.serializerMethod
 }
 
@@ -39,3 +55,5 @@ func (s *PrimitiveField) UnionKey() string {
 }
 
 func (s *PrimitiveField) WrapperPointer() bool { return false }
+
+func (s *PrimitiveField) IsPrimitive() bool { return true }

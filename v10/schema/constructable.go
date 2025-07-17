@@ -2,6 +2,7 @@ package schema
 
 type Constructable interface {
 	ConstructorMethod() string
+	FullQualifiedConstructorMethod() string
 }
 
 func getConstructableForType(t AvroType) (Constructable, bool) {

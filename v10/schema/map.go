@@ -26,12 +26,32 @@ func (s *MapField) Name() string {
 	return "Map" + s.itemType.Name()
 }
 
+func (s *MapField) Package() string {
+	return getPackageName(s.itemType.Package())
+}
+
 func (s *MapField) GoType() string {
 	return fmt.Sprintf("map[string]%v", s.itemType.GoType())
 }
 
+func (s *MapField) FullQualifiedGoType() string {
+	if _, ok := s.itemType.(PrimitiveType); ok {
+		return s.GoType()
+	}
+
+	return fmt.Sprintf("map[string]%s", s.itemType.FullQualifiedGoType())
+}
+
 func (s *MapField) SerializerMethod() string {
-	return fmt.Sprintf("write%v", s.Name())
+	return fmt.Sprintf("Write%v", s.Name())
+}
+
+func (s *MapField) FullQualifiedSerializerMethod() string {
+	packageName := s.itemType.Package()
+	if packageName == "" {
+		packageName = generator.PackageName
+	}
+	return fmt.Sprintf("%s.Write%v", packageName, s.Name())
 }
 
 func (s *MapField) filename() string {
@@ -56,6 +76,13 @@ func (s *MapField) ConstructorMethod() string {
 	return fmt.Sprintf("make(%v)", s.GoType())
 }
 
+func (s *MapField) FullQualifiedConstructorMethod() string {
+	if _, ok := s.itemType.(PrimitiveType); ok {
+		return s.ConstructorMethod()
+	}
+	return fmt.Sprintf("make(%v)", s.FullQualifiedGoType())
+}
+
 func (s *MapField) DefaultValue(lvalue string, rvalue interface{}) (string, error) {
 	items, ok := rvalue.(map[string]interface{})
 	if !ok {
@@ -73,8 +100,33 @@ func (s *MapField) DefaultValue(lvalue string, rvalue interface{}) (string, erro
 	return setters, nil
 }
 
+func (s *MapField) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	items, ok := rvalue.(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("Expected map as default for %v, got %v", lvalue, rvalue)
+	}
+	setters := ""
+
+	for k, v := range items {
+		setter, err := s.itemType.FullQualifiedDefaultValue(fmt.Sprintf("%v[%q]", lvalue, k), v)
+		if err != nil {
+			return "", err
+		}
+		setters += setter + "\n"
+	}
+	return setters, nil
+}
+
 func (s *MapField) WrapperType() string {
 	return fmt.Sprintf("%vWrapper", s.Name())
+}
+
+func (s *MapField) FullQualifiedWrapperType() string {
+	packageName := s.itemType.Package()
+	if packageName == "" {
+		packageName = generator.PackageName
+	}
+	return fmt.Sprintf("%s.%vWrapper", packageName, s.Name())
 }
 
 func (s *MapField) WrapperPointer() bool {

@@ -26,8 +26,16 @@ func (s *LongField) DefaultValue(lvalue string, rvalue interface{}) (string, err
 	return fmt.Sprintf("%v = %v", lvalue, rvalue), nil
 }
 
+func (s *LongField) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	return s.DefaultValue(lvalue, rvalue)
+}
+
 func (s *LongField) WrapperType() string {
 	return "types.Long"
+}
+
+func (s *LongField) FullQualifiedWrapperType() string {
+	return s.WrapperType()
 }
 
 func (s *LongField) IsReadableBy(f AvroType) bool {

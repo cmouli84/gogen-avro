@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/actgardner/gogen-avro/v10/generator"
@@ -34,8 +35,56 @@ func (r *RecordDefinition) Name() string {
 	return generator.ToPublicName(r.name.String())
 }
 
+func (r *RecordDefinition) Package() string {
+	return getPackageName(r.name.Namespace + r.name.Name)
+}
+
+func (r *RecordDefinition) GetImportPackages() []string {
+	packageMap := make(map[string]bool)
+	for _, field := range r.fields {
+		if field.HasDefault() {
+			fieldSetters, _ := r.FullQualifiedDefaultForField(field)
+			fieldSetterParts := strings.Split(fieldSetters, "\n")
+			for _, setter := range fieldSetterParts {
+				parts := strings.Split(setter, " = ")
+				if len(parts) == 2 && strings.HasPrefix(parts[1], "com") {
+					fieldType := strings.TrimSpace(parts[1])
+					pkg := strings.Split(fieldType, ".")
+					if len(pkg) == 2 {
+						packageMap[pkg[0]] = true
+					}
+				}
+			}
+		}
+		packageMap[field.Package()] = true
+	}
+	packages := make([]string, 0, len(packageMap))
+	for pkg := range packageMap {
+		if pkg != "" {
+			if pkg == r.Package() {
+				continue
+			}
+
+			if pkg != generator.PackageName {
+				pkg = fmt.Sprintf("%s/%s", generator.PackageName, pkg)
+			}
+			if generator.BasePackageName == "" {
+				packages = append(packages, pkg)
+			} else {
+				packages = append(packages, fmt.Sprintf("%s/%s", generator.BasePackageName, pkg))
+			}
+		}
+	}
+	sort.Strings(packages)
+	return packages
+}
+
 func (r *RecordDefinition) GoType() string {
 	return r.Name()
+}
+
+func (r *RecordDefinition) FullQualifiedGoType() string {
+	return fmt.Sprintf("%s.%s", r.Package(), r.GoType())
 }
 
 func (r *RecordDefinition) Aliases() []QualifiedName {
@@ -43,7 +92,11 @@ func (r *RecordDefinition) Aliases() []QualifiedName {
 }
 
 func (r *RecordDefinition) SerializerMethod() string {
-	return fmt.Sprintf("write%v", r.Name())
+	return fmt.Sprintf("Write%v", r.Name())
+}
+
+func (r *RecordDefinition) FullQualifiedSerializerMethod() string {
+	return fmt.Sprintf("%s.Write%v", r.Package(), r.Name())
 }
 
 func (r *RecordDefinition) NewWriterMethod() string {
@@ -77,13 +130,30 @@ func (r *RecordDefinition) ConstructorMethod() string {
 	return fmt.Sprintf("New%v()", r.Name())
 }
 
+func (r *RecordDefinition) FullQualifiedConstructorMethod() string {
+	return fmt.Sprintf("%s.New%v()", r.Package(), r.Name())
+}
+
 func (r *RecordDefinition) DefaultForField(f *Field) (string, error) {
-	return f.Type().DefaultValue(fmt.Sprintf("r.%v", f.GoName()), f.Default())
+	result, err := f.Type().DefaultValue(fmt.Sprintf("r.%v", f.GoName()), f.Default())
+	return result, err
+}
+
+func (r *RecordDefinition) FullQualifiedDefaultForField(f *Field) (string, error) {
+	result, err := f.Type().FullQualifiedDefaultValue(fmt.Sprintf("r.%v", f.GoName()), f.Default())
+	return result, err
 }
 
 func (r *RecordDefinition) ConstructableForField(f *Field) string {
 	if constructor, ok := getConstructableForType(f.Type()); ok {
 		return fmt.Sprintf("r.%v = %v\n", f.GoName(), constructor.ConstructorMethod())
+	}
+	return ""
+}
+
+func (r *RecordDefinition) FullQualifiedConstructableForField(f *Field) string {
+	if constructor, ok := getConstructableForType(f.Type()); ok {
+		return fmt.Sprintf("r.%v = %v\n", f.GoName(), constructor.FullQualifiedConstructorMethod())
 	}
 	return ""
 }
@@ -117,6 +187,21 @@ func (r *RecordDefinition) DefaultValue(lvalue string, rvalue interface{}) (stri
 	return fieldSetters, nil
 }
 
+func (r *RecordDefinition) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	items := rvalue.(map[string]interface{})
+	fieldSetters := ""
+	for k, v := range items {
+		field := r.FieldByName(k)
+		fieldSetter, err := field.Type().FullQualifiedDefaultValue(fmt.Sprintf("%v.%v", lvalue, field.GoName()), v)
+		if err != nil {
+			return "", err
+		}
+
+		fieldSetters += fieldSetter + "\n"
+	}
+	return fieldSetters, nil
+}
+
 func (r *RecordDefinition) Fields() []*Field {
 	return r.fields
 }
@@ -128,6 +213,10 @@ func (s *RecordDefinition) IsReadableBy(d Definition) bool {
 
 func (s *RecordDefinition) WrapperType() string {
 	return "types.Record"
+}
+
+func (s *RecordDefinition) FullQualifiedWrapperType() string {
+	return s.WrapperType()
 }
 
 func (s *RecordDefinition) WrapperPointer() bool {

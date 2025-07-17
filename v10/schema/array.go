@@ -22,6 +22,10 @@ func (s *ArrayField) Name() string {
 	return "Array" + s.itemType.Name()
 }
 
+func (s *ArrayField) Package() string {
+	return getPackageName(s.itemType.Package())
+}
+
 func (r *ArrayField) filename() string {
 	return generator.ToSnake(r.Name()) + ".go"
 }
@@ -30,8 +34,21 @@ func (s *ArrayField) GoType() string {
 	return fmt.Sprintf("[]%v", s.itemType.GoType())
 }
 
+func (s *ArrayField) FullQualifiedGoType() string {
+	return fmt.Sprintf("[]%v", s.itemType.FullQualifiedGoType())
+}
+
 func (s *ArrayField) SerializerMethod() string {
-	return fmt.Sprintf("write%v", s.Name())
+	return fmt.Sprintf("Write%v", s.Name())
+}
+
+func (s *ArrayField) FullQualifiedSerializerMethod() string {
+	packageName := s.itemType.Package()
+	if _, ok := s.itemType.(PrimitiveType); ok {
+		packageName = generator.PackageName
+	}
+
+	return fmt.Sprintf("%s.Write%v", packageName, s.Name())
 }
 
 func (s *ArrayField) ItemType() AvroType {
@@ -56,6 +73,10 @@ func (s *ArrayField) ConstructorMethod() string {
 	return fmt.Sprintf("make(%v, 0)", s.GoType())
 }
 
+func (s *ArrayField) FullQualifiedConstructorMethod() string {
+	return fmt.Sprintf("make(%v, 0)", s.FullQualifiedGoType())
+}
+
 func (s *ArrayField) DefaultValue(lvalue string, rvalue interface{}) (string, error) {
 	items, ok := rvalue.([]interface{})
 	if !ok {
@@ -78,8 +99,42 @@ func (s *ArrayField) DefaultValue(lvalue string, rvalue interface{}) (string, er
 	return setters, nil
 }
 
+func (s *ArrayField) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	if _, ok := s.itemType.(PrimitiveType); ok {
+		return s.DefaultValue(lvalue, rvalue)
+	}
+
+	items, ok := rvalue.([]interface{})
+	if !ok {
+		return "", fmt.Errorf("Expected array as default for %v, got %v", lvalue, rvalue)
+	}
+
+	setters := fmt.Sprintf("%v = make(%s,%v)\n", lvalue, s.FullQualifiedGoType(), len(items))
+	for i, item := range items {
+		if c, ok := getConstructableForType(s.itemType); ok {
+			setters += fmt.Sprintf("%v[%v] = %v\n", lvalue, i, c.FullQualifiedConstructorMethod())
+		}
+
+		setter, err := s.itemType.FullQualifiedDefaultValue(fmt.Sprintf("%v[%v]", lvalue, i), item)
+		if err != nil {
+			return "", err
+		}
+
+		setters += setter + "\n"
+	}
+	return setters, nil
+}
+
 func (s *ArrayField) WrapperType() string {
 	return fmt.Sprintf("%vWrapper", s.Name())
+}
+
+func (s *ArrayField) FullQualifiedWrapperType() string {
+	packageName := s.itemType.Package()
+	if _, ok := s.itemType.(PrimitiveType); ok {
+		packageName = generator.PackageName
+	}
+	return fmt.Sprintf("%s.%vWrapper", packageName, s.Name())
 }
 
 func (s *ArrayField) WrapperPointer() bool {

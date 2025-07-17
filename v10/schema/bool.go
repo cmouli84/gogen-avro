@@ -26,8 +26,16 @@ func (s *BoolField) DefaultValue(lvalue string, rvalue interface{}) (string, err
 	return fmt.Sprintf("%v = %v", lvalue, rvalue), nil
 }
 
+func (s *BoolField) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	return s.DefaultValue(lvalue, rvalue)
+}
+
 func (s *BoolField) WrapperType() string {
 	return "types.Boolean"
+}
+
+func (s *BoolField) FullQualifiedWrapperType() string {
+	return s.WrapperType()
 }
 
 func (s *BoolField) IsReadableBy(f AvroType) bool {

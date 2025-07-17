@@ -27,6 +27,7 @@ type config struct {
 	namespacedNames string
 	targetDir       string
 	sourcesComment  bool
+	basePackageName string
 	files           []string
 }
 
@@ -40,6 +41,7 @@ func parseCmdLine() config {
 	flag.BoolVar(&cfg.sourcesComment, "sources-comment", defaultSourcesComment, "Whether to include a list of sources files in the comment in generated files.")
 	flag.BoolVar(&cfg.shortUnions, "short-unions", defaultShortUnions, "Whether to use shorter names for Union types.")
 	flag.StringVar(&cfg.namespacedNames, "namespaced-names", defaultNamespacedNames, "Whether to generate namespaced names for types. Default is \"none\"; \"short\" uses the last part of the namespace (last word after a separator); \"full\" uses all namespace string.")
+	flag.StringVar(&cfg.basePackageName, "base-package", "", "Base package name for generated types. If not set, the package name will be used as the base package name.")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [flags] <target directory> <schema files>\n\nWhere 'flags' are:\n", os.Args[0])

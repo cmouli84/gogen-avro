@@ -24,7 +24,12 @@ func (f *FlatPackageGenerator) Add(def avro.Node) error {
 	if err == nil {
 		// If there's a template for this definition, add it to the package
 		filename := generator.ToSnake(def.Name()) + ".go"
-		f.files.AddFile(filename, file)
+		directory := def.Package()
+		if directory == generator.PackageName {
+			// If the package is the default package, use an empty directory
+			directory = ""
+		}
+		f.files.AddFile(directory, filename, file)
 	} else {
 		if err != templates.NoTemplateForType {
 			return err
@@ -51,6 +56,6 @@ func (f *FlatPackageGenerator) addRecordContainer(def *avro.RecordDefinition) er
 	if err != nil {
 		return err
 	}
-	f.files.AddFile(containerFilename, file)
+	f.files.AddFile("", containerFilename, file)
 	return nil
 }

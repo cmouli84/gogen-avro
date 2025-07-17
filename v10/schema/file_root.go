@@ -18,11 +18,23 @@ func (f *FileRoot) Name() string {
 	return ""
 }
 
+func (f *FileRoot) Package() string {
+	return ""
+}
+
 func (f *FileRoot) GoType() string {
 	return ""
 }
 
+func (f *FileRoot) FullQualifiedGoType() string {
+	return ""
+}
+
 func (f *FileRoot) SerializerMethod() string {
+	return ""
+}
+
+func (f *FileRoot) FullQualifiedSerializerMethod() string {
 	return ""
 }
 
@@ -42,11 +54,19 @@ func (f *FileRoot) DefaultValue(lvalue string, rvalue interface{}) (string, erro
 	return "", nil
 }
 
+func (f *FileRoot) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	return "", nil
+}
+
 func (f *FileRoot) IsReadableBy(_ Definition) bool {
 	return false
 }
 
 func (f *FileRoot) WrapperType() string {
+	return ""
+}
+
+func (f *FileRoot) FullQualifiedWrapperType() string {
 	return ""
 }
 

@@ -5,6 +5,11 @@ import (
 	"unicode"
 )
 
+var (
+	BasePackageName = ""
+	PackageName     = "avro"
+)
+
 // ToPublicName returns a go-idiomatic public name by using the package's
 // configured namer.
 func ToPublicName(name string) string {

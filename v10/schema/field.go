@@ -62,6 +62,10 @@ func (f *Field) Name() string {
 	return f.avroName
 }
 
+func (f *Field) Package() string {
+	return f.avroType.Package()
+}
+
 func (f *Field) Index() int {
 	return f.index
 }

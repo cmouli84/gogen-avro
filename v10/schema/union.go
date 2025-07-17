@@ -46,6 +46,24 @@ func (s *UnionField) Name() string {
 	return generator.ToPublicName(s.name)
 }
 
+func (s *UnionField) Package() string {
+	packageName := generator.PackageName
+	for _, i := range s.itemType {
+		if i.Package() != "" {
+			packageName = i.Package()
+			break
+		}
+	}
+	return packageName
+}
+
+func (s *UnionField) FullQualifiedGoType() string {
+	if s.nullIndex == -1 {
+		return fmt.Sprintf("%s.%s", s.Package(), s.Name())
+	}
+	return fmt.Sprintf("*%s.%s", s.Package(), s.Name())
+}
+
 func (s *UnionField) AvroTypes() []AvroType {
 	return s.itemType
 }
@@ -74,7 +92,11 @@ func (s *UnionField) filename() string {
 }
 
 func (s *UnionField) SerializerMethod() string {
-	return fmt.Sprintf("write%v", s.Name())
+	return fmt.Sprintf("Write%v", s.Name())
+}
+
+func (s *UnionField) FullQualifiedSerializerMethod() string {
+	return fmt.Sprintf("%s.Write%v", s.Package(), s.Name())
 }
 
 func (s *UnionField) ItemConstructor(f AvroType) string {
@@ -124,11 +146,30 @@ func (s *UnionField) DefaultValue(lvalue string, rvalue interface{}) (string, er
 	return init + constructorCall + assignment, err
 }
 
+func (s *UnionField) FullQualifiedDefaultValue(lvalue string, rvalue interface{}) (string, error) {
+	defaultType := s.itemType[0]
+	if _, ok := defaultType.(*NullField); ok {
+		return fmt.Sprintf("%v = nil", lvalue), nil
+	}
+	init := fmt.Sprintf("%v = %v\n", lvalue, s.FullQualifiedConstructorMethod())
+	lvalue = fmt.Sprintf("%v.%v", lvalue, defaultType.Name())
+	constructorCall := ""
+	if constructor, ok := getConstructableForType(defaultType); ok {
+		constructorCall = fmt.Sprintf("%v = %v\n", lvalue, constructor.FullQualifiedConstructorMethod())
+	}
+	assignment, err := defaultType.FullQualifiedDefaultValue(lvalue, rvalue)
+	return init + constructorCall + assignment, err
+}
+
 func (s *UnionField) WrapperType() string {
 	if s.NullIndex() == -1 {
 		return "types.Record"
 	}
 	return ""
+}
+
+func (s *UnionField) FullQualifiedWrapperType() string {
+	return s.WrapperType()
 }
 
 func (s *UnionField) WrapperPointer() bool {
@@ -155,6 +196,10 @@ func (s *UnionField) IsReadableBy(f AvroType) bool {
 
 func (s *UnionField) ConstructorMethod() string {
 	return fmt.Sprintf("New%v()", s.Name())
+}
+
+func (s *UnionField) FullQualifiedConstructorMethod() string {
+	return fmt.Sprintf("%s.New%v()", s.Package(), s.Name())
 }
 
 func (s *UnionField) Equals(reader *UnionField) bool {
